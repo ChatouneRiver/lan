@@ -297,6 +297,66 @@
   }
   #intro small { color: var(--discret); font-size: 20px; }
 
+  /* ── Introspection ── */
+  #monde { position: fixed; inset: 0; }
+  body.introspection #monde { filter: url(#onde); }
+  #introspection {
+    pointer-events: auto;
+    padding: 12px 14px;
+    font-size: clamp(9px, 1.5vw, 12px);
+    color: #fff;
+    background: #6b4fd8;
+    box-shadow: 0 0 0 3px #000, 0 6px 0 3px #2f1f7a;
+  }
+  #introspection:hover { background: #8068ea; }
+  #introspection:active { box-shadow: 0 0 0 3px #000, 0 2px 0 3px #2f1f7a; }
+  #voile {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 22px;
+    padding: 0 16px 9vh;
+    background: radial-gradient(circle at center, rgba(40, 20, 90, .15) 10%, rgba(5, 4, 10, .8) 85%);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 2s, visibility 2s;
+  }
+  body.introspection #voile { opacity: 1; visibility: visible; }
+  #voile p {
+    margin: 0;
+    font-family: var(--titre);
+    font-size: clamp(10px, 2vw, 16px);
+    letter-spacing: .5em;
+    text-indent: .5em;
+    color: #cfc4ff;
+    animation: souffle-texte 8s ease-in-out infinite;
+  }
+  @keyframes souffle-texte { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+  .halos { position: absolute; inset: 0; pointer-events: none; }
+  .halos i {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 46vmin; height: 46vmin;
+    margin: -23vmin 0 0 -23vmin;
+    border-radius: 50%;
+    border: 2px solid rgba(207, 196, 255, .5);
+    box-shadow: 0 0 40px 6px rgba(107, 79, 216, .45), inset 0 0 40px 6px rgba(107, 79, 216, .3);
+    opacity: 0;
+  }
+  body.introspection .halos i { animation: souffle 12s ease-in-out infinite; }
+  body.introspection .halos i:nth-child(2) { animation-delay: -4s; }
+  body.introspection .halos i:nth-child(3) { animation-delay: -8s; }
+  @keyframes souffle {
+    0%   { transform: scale(.3); opacity: 0; }
+    35%  { opacity: .8; }
+    100% { transform: scale(2.4); opacity: 0; }
+  }
+  #revenir { padding: 14px 18px; font-size: clamp(10px, 1.8vw, 14px); }
+
   @media (prefers-reduced-motion: reduce) {
     h1 .lettre, #intro p, #entrer { animation-iteration-count: 1 !important; }
   }
@@ -304,6 +364,7 @@
 </head>
 <body>
 
+<div id="monde">
 <canvas id="fond" aria-hidden="true"></canvas>
 <div id="scene" aria-hidden="true"></div>
 
@@ -320,9 +381,25 @@
   <p class="question" id="bloc-question"><span id="question"></span></p>
   <p class="infos" id="infos"><strong id="date"></strong><br><span id="lieu"></span></p>
   <p class="message" id="message"></p>
+  <button id="introspection" type="button">◉ INTROSPECTION</button>
 </main>
 
 <div class="bas">Clique sur les héros qui passent — salués : <b id="score">0</b></div>
+</div>
+
+<div id="voile" aria-hidden="true">
+  <div class="halos"><i></i><i></i><i></i></div>
+  <p>INTROSPECTION</p>
+  <button id="revenir" type="button">■ ARRÊTER</button>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="onde" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+    <feTurbulence id="onde-bruit" type="fractalNoise" baseFrequency="0.004 0.008" numOctaves="2" seed="7" result="bruit"/>
+    <feDisplacementMap id="onde-force" in="SourceGraphic" in2="bruit" scale="0" xChannelSelector="R" yChannelSelector="G" result="tordu"/>
+    <feColorMatrix id="onde-teinte" in="tordu" type="hueRotate" values="0"/>
+  </filter>
+</svg>
 <button id="son" type="button" aria-pressed="true">♪ SON</button>
 
 <div id="intro">
@@ -436,10 +513,12 @@
   }
 
   let avant = performance.now();
+  let fige = false, tempsScene = 0;   // "fige" : tout est à l'arrêt (introspection)
   function dessiner(maintenant) {
-    const dt = Math.min(.05, (maintenant - avant) / 1000);
+    const dt = fige ? 0 : Math.min(.05, (maintenant - avant) / 1000);
     avant = maintenant;
-    const t = maintenant / 1000;
+    tempsScene += dt;
+    const t = tempsScene;
     ctx.clearRect(0, 0, L, H);
 
     for (const e of etoiles) {
@@ -510,7 +589,7 @@
     const motif = [0, 1, 2, 1, 0, 2, 1, 2];
     let pas = 0;
     setInterval(() => {
-      if (!sonActif || audioCtx.state !== "running") return;
+      if (!sonActif || fige || audioCtx.state !== "running") return;
       const accord = accords[Math.floor(pas / 16) % accords.length];
       const t = audioCtx.currentTime + .03;
       note(accord[motif[pas % 8]] + 12, t, .16, "square", .09);
@@ -521,7 +600,7 @@
   }
 
   function bip() {
-    if (!audioCtx || !sonActif) return;
+    if (!audioCtx || !sonActif || fige) return;
     const t = audioCtx.currentTime;
     note(76, t, .08, "square", .12);
     note(83, t + .07, .14, "square", .12);
@@ -597,7 +676,7 @@
 
   // Personnages qui traversent l'écran d'un bord à l'autre
   function lancerPersonnage() {
-    if (document.hidden) return;
+    if (document.hidden || fige) return;
     if (scene.querySelectorAll(".perso:not(.coucou)").length >= (C.maxPersonnages || 4)) return;
     const p = tirer(false);
     if (!p) return;
@@ -637,7 +716,7 @@
 
   // Personnages "coucou" : sortent du bas de l'écran, regardent, puis redescendent
   function faireCoucou() {
-    if (document.hidden) return;
+    if (document.hidden || fige) return;
     const p = tirer(true);
     if (!p) return;
     aLEcran.add(p);
@@ -670,6 +749,56 @@
   function planifierCoucou() {
     faireCoucou();
     setTimeout(planifierCoucou, hasard(20000, 40000));
+  }
+
+  // ───────── Introspection : tout se fige, la bande son joue, l'image ondule ─────────
+  if (!C.introspection) {
+    $("introspection").remove();
+  } else {
+    let bande = null, enPause = [], debut = 0;
+
+    function onduler(maintenant) {
+      if (!fige) return;
+      const t = (maintenant - debut) / 1000;
+      const montee = Math.min(1, t / 4);                     // l'effet s'installe en douceur
+      $("onde-force").setAttribute("scale", (montee * (45 + 30 * Math.sin(t * .45))).toFixed(1));
+      $("onde-bruit").setAttribute("baseFrequency",
+        `${(.004 + .002 * Math.sin(t * .11)).toFixed(5)} ${(.008 + .003 * Math.cos(t * .14)).toFixed(5)}`);
+      $("onde-teinte").setAttribute("values", ((t * 9) % 360).toFixed(1));
+      requestAnimationFrame(onduler);
+    }
+
+    function entrer() {
+      if (fige) return;
+      fige = true;
+      // Fige toutes les animations en cours (personnages, titre, textes…)
+      enPause = document.getAnimations().filter((a) => a.playState === "running");
+      enPause.forEach((a) => a.pause());
+      if (fichier) fichier.pause();
+      document.body.classList.add("introspection");
+      debut = performance.now();
+      requestAnimationFrame(onduler);
+
+      bande = new Audio("music/" + encodeURIComponent(C.introspection));
+      bande.volume = C.volumeIntrospection ?? 1;
+      bande.addEventListener("ended", sortir);
+      bande.play().catch(sortir);
+    }
+
+    function sortir() {
+      if (!fige) return;
+      fige = false;
+      if (bande) { bande.pause(); bande = null; }
+      document.body.classList.remove("introspection");
+      $("onde-force").setAttribute("scale", "0");
+      $("onde-teinte").setAttribute("values", "0");
+      enPause.forEach((a) => a.play());
+      enPause = [];
+      if (fichier && sonActif) fichier.play();
+    }
+
+    $("introspection").addEventListener("click", entrer);
+    $("revenir").addEventListener("click", sortir);
   }
 
   // ───────── Ouverture ─────────

@@ -27,6 +27,11 @@ window.CONFIG = {
   musique: "LAN.mp3",
   volume: 0.5,
 
+  // Bande son du bouton "Introspection" (fichier du dossier "music").
+  // Laisse vide ("") pour retirer le bouton.
+  introspection: "Introspection.mp3",
+  volumeIntrospection: 1,
+
   // Personnages : fichiers du dossier "assets".
   // Pour en ajouter un, dépose le fichier dans "assets" et ajoute une ligne ici.
   //   regarde : sens dans lequel le personnage regarde sur l'image d'origine,
