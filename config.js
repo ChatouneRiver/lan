@@ -30,6 +30,8 @@ window.CONFIG = {
   // Bande son du bouton "Introspection" (fichier du dossier "music").
   // Laisse vide ("") pour retirer le bouton.
   introspection: "Introspection.mp3",
+  // Nombre de héros à toucher pour faire apparaître le bouton
+  herosPourSurprise: 30,
   volumeIntrospection: 1,
 
   // Personnages : fichiers du dossier "assets".

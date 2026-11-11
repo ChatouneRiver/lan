@@ -308,6 +308,13 @@
     background: #6b4fd8;
     box-shadow: 0 0 0 3px #000, 0 6px 0 3px #2f1f7a;
   }
+  #introspection[hidden] { display: none; }
+  body.ouvert .contenu > #introspection {
+    animation: apparait .8s cubic-bezier(.2, .8, .2, 1) forwards, eveil 1.6s ease-in-out .8s infinite;
+  }
+  @keyframes eveil {
+    50% { box-shadow: 0 0 0 3px #000, 0 6px 0 3px #2f1f7a, 0 0 30px 10px rgba(140, 115, 255, .75); }
+  }
   #introspection:hover { background: #8068ea; }
   #introspection:active { box-shadow: 0 0 0 3px #000, 0 2px 0 3px #2f1f7a; }
   #voile {
@@ -381,10 +388,10 @@
   <p class="question" id="bloc-question"><span id="question"></span></p>
   <p class="infos" id="infos"><strong id="date"></strong><br><span id="lieu"></span></p>
   <p class="message" id="message"></p>
-  <button id="introspection" type="button">◉ INTROSPECTION</button>
+  <button id="introspection" type="button" hidden>◉ INTROSPECTION</button>
 </main>
 
-<div class="bas">Clique sur les héros qui passent — salués : <b id="score">0</b></div>
+<div class="bas"><span id="bas-texte">Clique sur les héros qui passent — touchés :</span> <b id="score">0</b></div>
 </div>
 
 <div id="voile" aria-hidden="true">
@@ -621,6 +628,23 @@
   const aLEcran = new Set();   // images visibles en ce moment : jamais deux fois la même
   let score = 0;
 
+  // La surprise (bouton Introspection) se débloque après un certain nombre de héros touchés
+  const objectif = C.herosPourSurprise ?? 30;
+  let debloque = false;
+  function majSurprise() {
+    if (!C.introspection) return;
+    if (!debloque && score >= objectif) {
+      debloque = true;
+      $("introspection").hidden = false;
+      etincellesEn(innerWidth / 2, innerHeight * .6);
+    }
+    $("bas-texte").textContent = debloque
+      ? "Surprise débloquée ! Héros touchés :"
+      : `Touche ${objectif} héros pour débloquer une surprise — touchés :`;
+    $("score").textContent = debloque ? score : `${score} / ${objectif}`;
+  }
+  majSurprise();
+
   (C.images || []).forEach((entree) => {
     const def = typeof entree === "string" ? { fichier: entree } : entree;
     const img = new Image();
@@ -653,6 +677,7 @@
     perso.addEventListener("pointerdown", (e) => {
       score++;
       $("score").textContent = score;
+      majSurprise();
       etincellesEn(e.clientX, e.clientY);
       bip();
       saut.animate(
